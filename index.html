@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Cryptography Overlay</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visual Cryptography Overlay</h1>
+    <canvas id="overlayCanvas"></canvas>
+    <div>
+        <label for="opacitySlider">Opacity: </label>
+        <input type="range" id="opacitySlider" min="0" max="1" step="0.01" value="1">
+    </div>
+    <script>
+        window.onload = function() {
+            const overlayCanvas = document.getElementById("overlayCanvas");
+            const ctx = overlayCanvas.getContext("2d");
+            const opacitySlider = document.getElementById("opacitySlider");
+            const shareCount = 10; // Change this to match the number of shares you have
+
+            overlayCanvas.width = window.innerWidth;
+            overlayCanvas.height = window.innerHeight - 150;
+
+            const drawOverlay = () => {
+                ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+                for (let i = 1; i <= shareCount; i++) {
+                    const shareImage = new Image();
+                    shareImage.onload = function() {
+                        ctx.globalAlpha = opacitySlider.value;
+                        ctx.drawImage(shareImage, 0, 0, overlayCanvas.width, overlayCanvas.height);
+                    };
+                    shareImage.src = `share${i}.png`;
+                }
+            };
+
+            opacitySlider.addEventListener("input", drawOverlay);
+            drawOverlay();
+        };
+    </script>
+</body>
+</html>
