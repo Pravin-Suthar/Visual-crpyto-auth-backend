@@ -1,5 +1,6 @@
 const { Sequelize } = require("sequelize");
 const db = require("../models/index");
+const { encryptData, decryptData } = require("../encryption/aesEncryption");
 
 const visualCryptography = require("../cryptography/cryptography").default;
 const {
@@ -30,21 +31,34 @@ exports.createStudentMark = async (req, res) => {
       });
     }
 
+    marks = JSON.stringify(marks);
+
+    rollNo = rollNo;
+    marks = encryptData(marks);
+    course = encryptData(course);
+    examType = encryptData(examType);
 
     // Create a new student mark entry
-    marks = JSON.stringify(marks);
     const studentMark = await StudentMarks.create({
-      studentId: "5",
-      rollNo,
-      marks,
-      course,
-      examType,
+      studentId: 1,
+      rollNo: rollNo,
+      marks: marks,
+      course: course,
+      examType: examType,
       examinerId: id,
     });
 
+    const decryptedStudentMark = {
+      ...studentMark.toJSON(),
+      rollNo: studentMark.rollNo,
+      marks: JSON.parse(decryptData(studentMark.marks)), 
+      course: decryptData(studentMark.course),
+      examType: decryptData(studentMark.examType),
+    };
+
     return res.status(200).json({
       success: true,
-      studentMark,
+      studentMark: decryptedStudentMark,
       message: "Marks entered Successfully",
     });
   } catch (error) {
@@ -60,16 +74,27 @@ exports.getAllStudentsMarks = async (req, res) => {
     const studentMark = await StudentMarks.findAll({
       where: { examinerId: id },
     });
+    const decryptedStudentMarks = studentMark.map((studentMark) => {
+      return {
+        ...studentMark.toJSON(),
+        rollNo: studentMark.rollNo,
+        marks: decryptData(studentMark.marks),
+        course: decryptData(studentMark.course),
+        examType: decryptData(studentMark.examType),
+      };
+    });
+
+    console.log();
+
     return res.status(200).json({
       success: true,
-      studentMark,
+      studentMark: decryptedStudentMarks,
       message: "All Student data fetched successfully",
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
-
 exports.updateStudentMark = async (req, res) => {
   try {
     var { studentId, rollNo, marks, course, examType } = req.body;
@@ -85,14 +110,24 @@ exports.updateStudentMark = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Student mark not found" });
     }
+
     marks = JSON.stringify(marks);
-    // Update the student mark entry
+
+
+    studentMark.studentId = 1;
     studentMark.rollNo = rollNo;
-    studentMark.marks = marks;
-    studentMark.course = course;
-    studentMark.examType = examType;
-    studentMark.studentId = 10;
+    studentMark.marks = encryptData(JSON.stringify(marks));
+    studentMark.course = encryptData(course);
+    studentMark.examType = encryptData(examType);
+
+    // Update the student mark entry
     await studentMark.save();
+
+    studentMark.rollNo = studentMark.rollNo;
+    studentMark.marks = JSON.parse(decryptData(studentMark.marks));
+    studentMark.course = decryptData(studentMark.course);
+    studentMark.examType = decryptData(studentMark.examType);
+
     return res.status(200).json({
       success: true,
       studentMark,
@@ -126,14 +161,14 @@ exports.deleteStudentMark = async (req, res) => {
 
 exports.getStudentMarkById = async (req, res) => {
   try {
-    var id = req.body.studentid;
-    var examinerid = req.body.examinerid;
+    const id = req.body.studentid;
+    const examinerId = req.body.examinerid;
 
     // Find the student mark entry by ID
-    const studentMark = await StudentMarks.findOne({
+    let studentMark = await StudentMarks.findOne({
       where: {
-        examinerId: examinerid,
-        rollNo: id, // 'id' should be the value you want to search for in the 'rollNo' column
+        examinerId: examinerId,
+        rollNo: id,
       },
     });
 
@@ -143,10 +178,15 @@ exports.getStudentMarkById = async (req, res) => {
         .json({ success: false, message: "Student mark not found" });
     }
 
+    studentMark.rollNo = studentMark.rollNo;
+    studentMark.marks = JSON.parse(decryptData(studentMark.marks));
+    studentMark.course = decryptData(studentMark.course);
+    studentMark.examType = decryptData(studentMark.examType);
+
     return res.status(200).json({
       success: true,
       studentMark,
-      message: "Marks fetchdfded Successfully",
+      message: "Marks fetched Successfully",
     });
   } catch (error) {
     res.status(400).json({ error: error.message });

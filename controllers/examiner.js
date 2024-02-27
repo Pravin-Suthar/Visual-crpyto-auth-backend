@@ -1,5 +1,6 @@
 const { Sequelize } = require("sequelize");
 const db = require("../models/index");
+const { encryptData, decryptData } = require('../encryption/aesEncryption');
 
 const generateOTPImage = require("../cryptography/imageGenerator");
 const generateShares = require("../cryptography/cryptography");
@@ -7,7 +8,6 @@ const {
   sendOtpEmail,
   newAccountCreatedMail,
 } = require("../middleware/sendEmail"); // Import your email service module
-const { Examiner } = require("../models/examiner"); // Import the Examiner model
 const OTP = db.tempOtp;
 const Examinerdb = db.examiners;
 const fs = require("fs");
@@ -116,6 +116,7 @@ exports.otpGenerator = async (req, res) => {
     return res.status(400).json({ success: false, message: error.message });
   }
 };
+
 exports.registerExaminer = async (req, res) => {
   try {
     const {
@@ -123,34 +124,38 @@ exports.registerExaminer = async (req, res) => {
       lastName,
       email,
       phoneNumber,
-      dateOfBirth,
       gender,
       address,
       qualifications,
-    } = req.body; // Include all fields from the request body
+    } = req.body; 
 
-    // Check if the email already exists
-    // const existingExaminer = await Examiner.findOne({ where: { email } });
-    // if (existingExaminer) {
-    //   return res
-    //     .status(400)
-    //     .json({ success: false, message: "Email already exists" });
-    // }
+    // Check if any parameter is undefined
+    if (
+      firstName === undefined ||
+      lastName === undefined ||
+      email === undefined ||
+      phoneNumber === undefined ||
+      gender === undefined ||
+      address === undefined ||
+      qualifications === undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more parameters are missing in the request body",
+      });
+    }
 
-    // Create a new examiner record in the database with all provided data
+    // Encrypt examiner data before storing it in the database
     await Examinerdb.create({
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-      dateOfBirth,
-      gender,
-      address,
-      qualifications,
+      firstName: encryptData(firstName),
+      lastName: encryptData(lastName),
+      email: encryptData(email),
+      phoneNumber: encryptData(phoneNumber),
+      gender: encryptData(gender),
+      address: encryptData(address),
+      qualifications: encryptData(qualifications),
     });
-
-    // Send a registration email to the user
-
+    
     return res
       .status(201)
       .json({ success: true, message: "Examiner registered successfully" });
@@ -163,6 +168,8 @@ exports.registerExaminer = async (req, res) => {
     });
   }
 };
+
+
 
 exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
